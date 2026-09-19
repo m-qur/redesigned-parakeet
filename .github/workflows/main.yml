@@ -7,15 +7,24 @@ jobs:
   extract-ddi:
     runs-on: macos-26
     steps:
-      - name: Check xcodes version
-        run: xcodes version
+      - name: Check disk space
+        run: df -h /
 
-      - name: Install Xcode 27.2 beta
+      - name: Download Xcode 27.2 beta
         env:
-          XCODES_USERNAME: ${{ secrets.APPLE_ID }}
-          XCODES_PASSWORD: ${{ secrets.APPLE_ID_APP_SPECIFIC_PASSWORD }}
+          XCODE_XIP_URL: ${{ secrets.XCODE_XIP_URL }}
         run: |
-          xcodes install "27.2 Beta (27B5019j)" --select
+          curl -L -o Xcode_27.2_beta.xip "$XCODE_XIP_URL"
+
+      - name: Expand Xcode .xip
+        run: |
+          xip --expand Xcode_27.2_beta.xip
+          ls -d Xcode*.app
+
+      - name: Move Xcode into /Applications and select it
+        run: |
+          sudo mv Xcode*.app /Applications/Xcode_27.2_beta.app
+          sudo xcode-select -s /Applications/Xcode_27.2_beta.app
 
       - name: Run Xcode first launch (extracts bundled DDIs)
         run: |
