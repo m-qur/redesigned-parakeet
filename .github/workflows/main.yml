@@ -10,44 +10,38 @@ jobs:
       - name: Check xcodes version
         run: xcodes version
 
-      - name: List available Xcode versions
+      - name: Install Xcode 27.2 beta
         env:
           XCODES_USERNAME: ${{ secrets.APPLE_ID }}
           XCODES_PASSWORD: ${{ secrets.APPLE_ID_APP_SPECIFIC_PASSWORD }}
-        run: xcodes list
+        run: |
+          xcodes install "27.2 Beta (27B5019j)" --select
 
-      # - name: Install Xcode 27.2 beta
-      #   env:
-      #     XCODES_USERNAME: ${{ secrets.APPLE_ID }}
-      #     XCODES_PASSWORD: ${{ secrets.APPLE_ID_APP_SPECIFIC_PASSWORD }}
-      #   run: |
-      #     xcodes install "27.2 Beta" --experimental-unxip --select
+      - name: Run Xcode first launch (extracts bundled DDIs)
+        run: |
+          sudo xcodebuild -license accept
+          sudo xcodebuild -runFirstLaunch
 
-      # - name: Run Xcode first launch (extracts bundled DDIs)
-      #   run: |
-      #     sudo xcodebuild -license accept
-      #     sudo xcodebuild -runFirstLaunch
+      - name: Sanity check
+        run: xcodebuild -version
 
-      # - name: Sanity check
-      #   run: xcodebuild -version
+      - name: Clone DeveloperDiskImage repo
+        run: git clone https://github.com/doronz88/DeveloperDiskImage.git
 
-      # - name: Clone DeveloperDiskImage repo
-      #   run: git clone https://github.com/doronz88/DeveloperDiskImage.git
+      - name: Dry run (sanity check before writing)
+        run: |
+          cd DeveloperDiskImage
+          sudo python3 update_ddi.py --dry-run
 
-      # - name: Dry run (sanity check before writing)
-      #   run: |
-      #     cd DeveloperDiskImage
-      #     sudo python3 update_ddi.py --dry-run
+      - name: Extract DDIs from the local Xcode install
+        run: |
+          cd DeveloperDiskImage
+          sudo python3 update_ddi.py
 
-      # - name: Extract DDIs from the local Xcode install
-      #   run: |
-      #     cd DeveloperDiskImage
-      #     sudo python3 update_ddi.py
-
-      # - uses: actions/upload-artifact@v4
-      #   with:
-      #     name: ddi-27.2-beta
-      #     path: |
-      #       DeveloperDiskImage/PersonalizedImages/Xcode_iOS_DDI_Personalized
-      #       DeveloperDiskImage/PersonalizedImages/Xcode_iOS_DDI_Cryptex
-      #     retention-days: 14
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ddi-27.2-beta
+          path: |
+            DeveloperDiskImage/PersonalizedImages/Xcode_iOS_DDI_Personalized
+            DeveloperDiskImage/PersonalizedImages/Xcode_iOS_DDI_Cryptex
+          retention-days: 14
