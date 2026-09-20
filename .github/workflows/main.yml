@@ -18,6 +18,9 @@ jobs:
           sudo xcodebuild -license accept
           sudo xcodebuild -runFirstLaunch
 
+      - name: Download additional platform/device support
+        run: xcodebuild -downloadAllPlatforms
+
       - name: Update device DDIs
         run: xcrun devicectl manage ddis update
 
