@@ -1,28 +1,38 @@
-name: Extract DDI (xcode-27 runner)
+name: Extract DDI (Xcode 27.2 beta)
 
 on:
   workflow_dispatch:
 
 jobs:
   extract-ddi:
-    runs-on: xcode-27
+    runs-on: macos-26
     steps:
-      - name: Check pre-installed Xcode version
-        run: xcodebuild -version
+      - name: Check disk space
+        run: df -h /
 
-      - name: List all installed Xcode versions on this runner
-        run: ls -d /Applications/Xcode*.app
+      - name: Download Xcode 27.2 beta
+        env:
+          XCODE_XIP_URL: ${{ secrets.XCODE_XIP_URL }}
+        run: |
+          curl -L -o Xcode_27.2_beta.xip "$XCODE_XIP_URL"
+
+      - name: Expand Xcode .xip
+        run: |
+          xip --expand Xcode_27.2_beta.xip
+          ls -d Xcode*.app
+
+      - name: Move Xcode into /Applications and select it
+        run: |
+          sudo mv Xcode*.app /Applications/Xcode_27.2_beta.app
+          sudo xcode-select -s /Applications/Xcode_27.2_beta.app
 
       - name: Run Xcode first launch (extracts bundled DDIs)
         run: |
           sudo xcodebuild -license accept
           sudo xcodebuild -runFirstLaunch
 
-      - name: Download additional platform/device support
-        run: xcodebuild -downloadAllPlatforms
-
-      - name: Update device DDIs
-        run: xcrun devicectl manage ddis update
+      - name: Sanity check
+        run: xcodebuild -version
 
       - name: Clone DeveloperDiskImage repo
         run: git clone https://github.com/doronz88/DeveloperDiskImage.git
@@ -39,7 +49,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ddi-xcode27-runner
+          name: ddi-27.2-beta
           path: |
             DeveloperDiskImage/PersonalizedImages/Xcode_iOS_DDI_Personalized
             DeveloperDiskImage/PersonalizedImages/Xcode_iOS_DDI_Cryptex
