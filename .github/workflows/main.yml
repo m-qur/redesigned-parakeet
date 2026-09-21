@@ -1,38 +1,54 @@
-name: Extract DDI (Xcode 27.2 beta)
+name: Extract DDI (Xcode 27.1 Beta 1, from hosted download)
 
 on:
   workflow_dispatch:
 
 jobs:
   extract-ddi:
-    runs-on: macos-26
+    runs-on: xcode-27
     steps:
-      - name: Check disk space
-        run: df -h /
+      - name: Show pre-installed Xcode (for contrast — not what we'll use)
+        run: |
+          xcodebuild -version
+          ls -d /Applications/Xcode*.app
 
-      - name: Download Xcode 27.2 beta
+      - name: Download Xcode 27.1 Beta 1
         env:
           XCODE_XIP_URL: ${{ secrets.XCODE_XIP_URL }}
         run: |
-          curl -L -o Xcode_27.2_beta.xip "$XCODE_XIP_URL"
+          curl -L -f -o Xcode_27.1_beta1.xip "$XCODE_XIP_URL"
+
+      - name: Verify download
+        run: |
+          ls -lh Xcode_27.1_beta1.xip
+          file Xcode_27.1_beta1.xip
 
       - name: Expand Xcode .xip
         run: |
-          xip --expand Xcode_27.2_beta.xip
+          xip --expand Xcode_27.1_beta1.xip
           ls -d Xcode*.app
 
-      - name: Move Xcode into /Applications and select it
+      - name: Install into /Applications under a distinct name
         run: |
-          sudo mv Xcode*.app /Applications/Xcode_27.2_beta.app
-          sudo xcode-select -s /Applications/Xcode_27.2_beta.app
+          sudo mv Xcode*.app "/Applications/Xcode_27.1_beta1.app"
+
+      - name: Select THIS Xcode explicitly
+        run: |
+          sudo xcode-select -s /Applications/Xcode_27.1_beta1.app
+          xcode-select -p
+
+      - name: Confirm active Xcode version matches 27.1 Beta 1
+        run: |
+          xcodebuild -version
+          /Applications/Xcode_27.1_beta1.app/Contents/Developer/usr/bin/xcodebuild -version
 
       - name: Run Xcode first launch (extracts bundled DDIs)
         run: |
           sudo xcodebuild -license accept
           sudo xcodebuild -runFirstLaunch
 
-      - name: Sanity check
-        run: xcodebuild -version
+      - name: Update device DDIs
+        run: xcrun devicectl manage ddis update
 
       - name: Clone DeveloperDiskImage repo
         run: git clone https://github.com/doronz88/DeveloperDiskImage.git
@@ -40,16 +56,16 @@ jobs:
       - name: Dry run (sanity check before writing)
         run: |
           cd DeveloperDiskImage
-          sudo python3 update_ddi.py --dry-run
+          sudo DEVELOPER_DIR=/Applications/Xcode_27.1_beta1.app/Contents/Developer python3 update_ddi.py --dry-run
 
-      - name: Extract DDIs from the local Xcode install
+      - name: Extract DDIs from the downloaded Xcode install
         run: |
           cd DeveloperDiskImage
-          sudo python3 update_ddi.py
+          sudo DEVELOPER_DIR=/Applications/Xcode_27.1_beta1.app/Contents/Developer python3 update_ddi.py
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ddi-27.2-beta
+          name: ddi-27.1-beta1-from-url
           path: |
             DeveloperDiskImage/PersonalizedImages/Xcode_iOS_DDI_Personalized
             DeveloperDiskImage/PersonalizedImages/Xcode_iOS_DDI_Cryptex
